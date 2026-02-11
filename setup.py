@@ -7,8 +7,8 @@ def get_requirements():
 
 setup(
 	name="svrz",
-	version="0.0.1",
-    description="Stochastic Variance Reduction for Zeroth-order Descent",
+	version="0.1.0",
+    description="VR-SZD: Variance Reduced Structured Zeroth-order Descent",
 	author="Akatsuki96",
 	author_email="marco.rando0396@gmail.com",
 	packages=find_packages(),

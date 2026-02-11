@@ -1,4 +1,4 @@
-from torch import Generator, Tensor, dtype, randn, eye, randperm, float32
+from torch import Generator, Tensor, dtype, randn, eye, randperm, float32, zeros, multinomial, ones_like
 from torch.linalg import qr
 
 
@@ -32,8 +32,7 @@ class DirectionGenerator:
         self.l = l
         self.dtype = dtype
         self.device = device
-        self.generator = Generator(device=device)
-        self.generator.manual_seed(seed)
+        self.generator = Generator(device=device).manual_seed(seed)
 
     @property
     def shape(self):
@@ -53,6 +52,29 @@ class DirectionGenerator:
         raise NotImplementedError("Call method is implemented in subclasses!")
 
 
+
+
+class SphericalDirections(DirectionGenerator):
+    """
+    Generator of direction matrices where every direction is sampled i.i.d from the unit sphere.
+    
+    Summary:
+        Generates directions by sampling uniformly from the unit sphere.
+    """
+
+    def __call__(self) -> Tensor:
+        """
+        Method to generate directions using spherical coordinates.
+        
+        Summary:
+            Generates directions by sampling uniformly from the unit sphere.
+            
+        Returns:
+            Tensor: The generated directions.
+        """
+        P = randn(size=(self.d, self.l), dtype=self.dtype, device=self.device, generator=self.generator)
+        return (P / P.norm(p=2, dim=0)).T
+        
 
     
 class QRDirections(DirectionGenerator):
@@ -85,6 +107,9 @@ class HouseholderDirections(DirectionGenerator):
     def __call__(self) -> Tensor:
         v = randn(size=(self.d,), dtype=self.dtype, device=self.device, generator=self.generator)
         v.div_(v.norm(p=2))
-        return (eye(self.d, self.l, dtype=self.dtype, device=self.device) - 2 * v.outer(v[:self.l])).T
+        I = zeros((self.l, self.d), dtype = self.dtype, device=self.device)
+        inds = multinomial(ones_like(v), num_samples=self.l, replacement=False, generator=self.generator) 
+        I[range(self.l), inds] = 1.0
+        return I - 2 * v[inds].outer(v)
 
 
