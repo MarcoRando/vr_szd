@@ -1,4 +1,4 @@
-from torch import Generator, randint, dtype, float32
+from torch import Generator, randint
 
 
 class TargetFunction:
