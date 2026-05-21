@@ -1,10 +1,15 @@
 import torch
+import torch.nn.functional as F
+
 
 import numpy as np 
 
 from svrz.optimizers import VRSZD, VRSZDPhase
 from svrz.directions import QRDirections, SphericalDirections
 from svrz.prox import SoftThreshold, ProxOperator
+from svrz.utils import _ffd
+
+
 
 
 def test_target(x, z = None):
@@ -20,13 +25,22 @@ def test_target(x, z = None):
     return X_i.square()#.mean(0, keepdim=True)
 
 
-
-
 T = 1000#0000
 m = 20
-l = 1
-d = 100
+l = 5
+d = 5
 b = 1
+
+
+def stoc_grad(x, z = None):
+
+#    grad = torch.zeros_like(x)
+    X_i = x.index_select(0, z.unsqueeze(0)).squeeze(0)
+#    grad[z] = 2 * x[z]
+    return 2 * X_i * F.one_hot(z, num_classes=d)
+
+
+
 
 generator = torch.Generator(device='cuda').manual_seed(121451)
 
@@ -35,7 +49,7 @@ prox = ProxOperator()#lam=1e-5)
 P = QRDirections(d=d, l=l, b=b, seed=12131415, device='cuda', dtype=torch.float64)
 #P = SphericalDirections(d=d, l=l, b=b, seed=12131415, device='cuda', dtype=torch.float64)
 
-opt = VRSZD(x0=x0, P=P, m=m, prox=prox, gamma=0.11, h=1e-5, seed=12131415)
+opt = VRSZD(x0=x0, P=P, m=m, prox=prox, gamma=0.11, h=1e-10, seed=12131415)
 
 f_map = torch.vmap(torch.vmap(lambda x, z: test_target(x, z), in_dims=(0, None)), in_dims=(0,0))
 budget = 10000
@@ -50,7 +64,7 @@ while num_evals < budget:
 
         print(f"[--] F(x_tau) = {f_curr.item()}")
         num_evals += d * (l + 1)
- #       print(f"[--] F(x_next) = {f_next}")
+
     else:
         x_inn_next, x_out_next, x_inner, x_out = population
 
@@ -61,13 +75,16 @@ while num_evals < budget:
 
         f_inn_curr  = torch.vmap(lambda z : test_target(x_inner, z), in_dims=(0,))(zeta)
         f_out_curr  = torch.vmap(lambda z : test_target(x_out, z), in_dims=(0, ))(zeta) # f_map(x_out, zeta)
-#        print([x.item() for x in f_inn_curr.flatten()], f_out_curr)
-#        print("FIN: ", f_inn_curr)
-#        exit()
-        values = [f_inn_next, f_out_next, f_inn_curr, f_out_curr]
-#        print("Theoretical: ",2 * m * b * (l + 1), "Pratical: ", np.sum([x.flatten().shape[0] for x in values]) )
-        num_evals += np.sum([x.flatten().shape[0] for x in values])
-#        exit()
 
-#        exit()
+        values = [f_inn_next, f_out_next, f_inn_curr, f_out_curr]
+
+        num_evals += np.sum([x.flatten().shape[0] for x in values])
+        h = opt.h(opt.tau)
+        g_k_in = _ffd(f_inn_next, f_inn_curr, opt.G, h, nrm_const = x0.shape[-1])
+        g_k_out = _ffd(f_out_next, f_out_curr, opt.G, h, nrm_const = x0.shape[-1])
+
+        grad_in = torch.vmap(lambda z :stoc_grad(x_inner, z), in_dims=(0,))(zeta).mean(0)
+        grad_out = torch.vmap(lambda z :stoc_grad(x_out, z), in_dims=(0,))(zeta).mean(0)
+
+
     opt.tell(population, values)

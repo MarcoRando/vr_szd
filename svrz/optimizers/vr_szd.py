@@ -39,8 +39,6 @@ class VRSZD(AbsOptimizer):
         self.tau = 0
         self.k = 0
         self.x_inner = x0.clone()
-    # def _approx_grad(self, f, x, z, fx, h, P):
-    #     return f(x + h * P, z).add_(fx, alpha=-1).div_(h).mul(P).sum(dim=0, keepdims=True).mul_(P.shape[1] / P.shape[0])
         
 
     def ask(self):
@@ -59,19 +57,18 @@ class VRSZD(AbsOptimizer):
         gamma = self.gamma(self.tau)
         if self.phase == VRSZDPhase.DET_GRAD_APPROX:
             y_next, y_curr = y
- #           print(y_next.shape)
             self.g_tau = _ffd(y_next.view(1, -1), y_curr, self.I, h, nrm_const = self.x0.shape[-1])
             self.phase = VRSZDPhase.INNER_LOOP_ITER
         elif self.phase == VRSZDPhase.INNER_LOOP_ITER:
-            #        values = [f_inn_next, f_out_next, f_inn_curr, f_out_curr]
+
             y_in_next, y_out_next, y_in_cur, y_out_cur = y
 
             g_k_in = _ffd(y_in_next, y_in_cur, self.G, h, nrm_const = self.x0.shape[-1])
             g_k_out = _ffd(y_out_next, y_out_cur, self.G, h, nrm_const = self.x0.shape[-1])
-#            print(g_k_in)
+
             self.x_inner = self.prox(self.x_inner - gamma* (g_k_in - g_k_out + self.g_tau), gamma)
             self.k += 1
-#            print(f"\t[--] k: {self.k}")
+
             if self.k >= self.m:
                 self.k = 0
                 self.tau += 1
