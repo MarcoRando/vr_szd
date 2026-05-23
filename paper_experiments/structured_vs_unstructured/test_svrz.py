@@ -17,26 +17,32 @@ def test_target(x, z = None):
         return torch.mean(x ** 2)#, dim=1, keepdim=True) #+ torch.sum(z ** 2)
 #    print(x, z)
 #    print(x.shape)
-
+    print(x.shape, z.shape)
     X_i = x.index_select(0, z.unsqueeze(0)).squeeze(0)
+    print(X_i.shape, x.shape, z.shape)
+    ris = X_i.square()
+    print(ris.shape)
+    exit()
 #    print(X_i)
 #    print(x.square().mean().shape, X_i.shape)
 #    return torch.mean(x ** 2)#, dim=1, keepdim=True)
-    return X_i.square()#.mean(0, keepdim=True)
+    return ris
 
 
 T = 1000#0000
 m = 20
 l = 5
 d = 5
-b = 1
+b = 3
 
 
 def stoc_grad(x, z = None):
 
 #    grad = torch.zeros_like(x)
     X_i = x.index_select(0, z.unsqueeze(0)).squeeze(0)
+    print(X_i.shape)
 #    grad[z] = 2 * x[z]
+
     return 2 * X_i * F.one_hot(z, num_classes=d)
 
 
@@ -67,16 +73,19 @@ while num_evals < budget:
 
     else:
         x_inn_next, x_out_next, x_inner, x_out = population
-
+        print(x_inn_next.shape, x_out_next.shape, x_inner.shape, x_out.shape)
         zeta = torch.randint(0, d, size=(b,), device=x0.device, generator=generator).to(dtype=torch.long) #.repeat_interleave(l)#, generator=generator)
-
+        print("----------------------__FIINNNNNNNNNNNNNNNNNNNN")
         f_inn_next = f_map(x_inn_next, zeta)
         f_out_next = f_map(x_out_next, zeta)
-
+        print("----------------------__FIINNNNNNNNNNNNNNNNNNNN")
+       # exit()
         f_inn_curr  = torch.vmap(lambda z : test_target(x_inner, z), in_dims=(0,))(zeta)
         f_out_curr  = torch.vmap(lambda z : test_target(x_out, z), in_dims=(0, ))(zeta) # f_map(x_out, zeta)
 
         values = [f_inn_next, f_out_next, f_inn_curr, f_out_curr]
+        print(f_inn_next.shape, f_inn_curr.shape, x_inner.shape)
+        exit()
 
         num_evals += np.sum([x.flatten().shape[0] for x in values])
         h = opt.h(opt.tau)

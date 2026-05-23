@@ -1,14 +1,44 @@
+import sys
 import torch
 import numpy as np 
-from svrz.optimizers import VRSZDPhase
+from svrz.optimizers import VRSZD, VRSZDPhase
 
+from svrz.prox import SoftThreshold, ProxOperator
+
+
+sys.path.append("../")
 from targets import QuadraticLasso
 
 
 
-def get_target(name, d, seed = 12131415, **target_params):
+
+class SyntheticResult:
+
+    def __init__(self):
+        self.full_values = []
+        self.grad_map_norms = []
+        self.list_num_evals = []
+    
+    def add(self, values, gmaps, num_evals):
+        self.full_values.append(values)
+        self.grad_map_norms.append(gmaps)
+        self.list_num_evals.append(num_evals)
+
+    def get_stats(self):
+        mu_values, std_values         = np.mean(self.full_values, axis=0),    np.std(self.full_values, axis=0)
+        mu_gmap_norms, std_gmap_norms = np.mean(self.grad_map_norms, axis=0), np.std(self.grad_map_norms, axis=0)
+        mu_num_evals, std_num_evals   = np.mean(self.list_num_evals, axis=0), np.std(self.list_num_evals, axis=0)
+        return mu_values, std_values, mu_gmap_norms, std_gmap_norms, mu_num_evals, std_num_evals
+
+    
+
+
+def get_target_function(name, d, target_params, seed = 1213, dtype=torch.float64, device='cuda'):
     if name == 'qlasso':
-        return QuadraticLasso(d = d, seed = seed, *target_params)
+        L, mu, lam = target_params['L'], target_params['mu'], target_params['lam']
+        prox = SoftThreshold(lam=lam)
+        return QuadraticLasso(d = d,  L = L, mu = mu, lam=lam, dtype=dtype, device=device, seed = seed), prox
+
 
 
 

@@ -14,3 +14,4 @@ class SoftThreshold(ProxOperator):
     def __call__(self, x, gamma):
         return torch.sign(x) * torch.maximum(abs(x) - self.lam * gamma, torch.zeros_like(x))
     
+
