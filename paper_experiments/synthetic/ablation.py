@@ -105,7 +105,7 @@ if __name__ == "__main__":
     parser.add_argument("--L", type=float, default=100000.0, help="Lipschitz constant of the gradient of the target function f")
     parser.add_argument("--mu", type=float, default=1.0, help="Strong convexity parameter of the target function f")
     parser.add_argument("--lam", type=float, default=1e-3, help="Regularization parameter of the regularization term h")
-    parser.add_argument("--budget", type=int, default=100000, help='Number of (stochastic) function evaluations')
+    parser.add_argument("--budget", type=int, default=1000000, help='Number of (stochastic) function evaluations')
 
     # VR-SZD parameters
     parser.add_argument("--b", type=int, default=3, help="Batch size (i.e. number of rotations G)")
